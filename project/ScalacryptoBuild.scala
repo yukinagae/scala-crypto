@@ -15,7 +15,8 @@ object ScalacryptoBuild extends Build {
       libraryDependencies ++= Seq( //
         "org.specs2" %% "specs2" % "2.3.8" % "test", //
         "junit" % "junit" % "4.11" % "test",
-        "org.bouncycastle" % "bcprov-jdk15on" % "1.50" //
+        "org.bouncycastle" % "bcprov-jdk15on" % "1.50", //
+        "commons-codec" % "commons-codec" % "1.9" //
         ) //
         ))
 }
