@@ -13,6 +13,8 @@ class CoreSpec extends Specification {
       val key_pair = generate_key_pair
       val data = "secret text"
 
+      println(s"private:${key_pair.getPrivate}")
+      println(s"public:${key_pair.getPublic}")
       println(s"private algorithm:${key_pair.getPrivate.getAlgorithm}")
       println(s"public algorithm:${key_pair.getPublic.getAlgorithm}")
       println(s"private format:${key_pair.getPrivate.getFormat}")
