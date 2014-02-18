@@ -38,9 +38,9 @@ object Core {
     key_pair.getPrivate
   }
 
-  def as_private_key(key: Key): PrivateKey = {
+  def as_private_key(key: Any): PrivateKey = {
     key match {
-      // TODO case k: KeyPair 
+      case k: KeyPair => private_key(k)
       case k: PrivateKey => k
       case _ => throw new RuntimeException(s"Dont't know how to convert to private key: ${key}")
     }
@@ -50,9 +50,9 @@ object Core {
     key_pair.getPublic
   }
 
-  def as_public_key(key: Key): PublicKey = {
+  def as_public_key(key: Any): PublicKey = {
     key match {
-      // TODO case k: KeyPair
+      case k: KeyPair => public_key(k)
       case k: PublicKey => k
       case _ => throw new RuntimeException(s"Dont't know how to convert to public key: ${key}")
     }
@@ -74,6 +74,7 @@ object Core {
     Cipher.getInstance(transformation, provider)
   }
 
+  // TODO
   def integer_byte(i: Int, byte_offset: Byte): Byte = {
     val short_int = (0xff & (i << (byte_offset * 8)))
     if (short_int < 128) {
@@ -83,6 +84,7 @@ object Core {
     }
   }
 
+  // TODO
   def long_byte(l: Long, byte_offset: Byte): Byte = {
     val i = l.toInt
     val short_int = (0xff & (i << (byte_offset * 8)))
@@ -93,20 +95,40 @@ object Core {
     }
   }
 
+  // TODO
   def integer_bytes(i: Int): Array[Byte] = {
     Array(integer_byte(i, 3), integer_byte(i, 2), integer_byte(i, 1), integer_byte(i, 0))
   }
 
+  // TODO
   def long_bytes(l: Long): Array[Byte] = {
     Array(long_byte(l, 7), long_byte(l, 6), long_byte(l, 5), long_byte(l, 4), long_byte(l, 3), long_byte(l, 2), long_byte(l, 1), long_byte(l, 0))
   }
 
-  def do_cipher(cipher: Cipher, mode: Int, key: Key, data: Array[Byte]): Array[Byte] = {
-    cipher.init(mode, key)
-    cipher.doFinal(data)
+  def get_data_bytes(data: Any): Array[Byte] = {
+    data match {
+      case d: Array[Byte] => d
+      case d: String => d.getBytes(default_character_encoding)
+      case d: Int => integer_bytes(d)
+      case d: Long => long_bytes(d)
+      case _ => throw new RuntimeException(s"Do not know how to convert a : ${data} to a byte array.")
+    }
   }
 
-  def encrypt(key: Key, data: Array[Byte], cipher: Cipher = create_cipher()): Array[Byte] = {
+  def get_data_str(data: Any): String = {
+    data match {
+      case d: String => d
+      case d: Array[Byte] => new String(d, default_character_encoding)
+      case _ => ""
+    }
+  }
+
+  def do_cipher(cipher: Cipher, mode: Int, key: Key, data: Any): Array[Byte] = {
+    cipher.init(mode, key)
+    cipher.doFinal(get_data_bytes(data))
+  }
+
+  def encrypt(key: Key, data: Any, cipher: Cipher = create_cipher()): Array[Byte] = {
     do_cipher(cipher, Cipher.ENCRYPT_MODE, key, data)
   }
 
@@ -138,32 +160,32 @@ object Core {
     new KeyPair(decode_public_key(key_pair_map._1), decode_private_key(key_pair_map._2)) // TODO
   }
 
-  def sign(key: Key, data: Array[Byte]): Array[Byte] = {
-    val private_key: PrivateKey = key.asInstanceOf[PrivateKey]
+  def sign(key: Any, data: Any): Array[Byte] = {
+    val private_key: PrivateKey = as_private_key(key)
     val signature = Signature.getInstance(default_signature_algorithm, default_provider)
     signature.initSign(private_key)
-    signature.update(data)
+    signature.update(get_data_bytes(data))
     signature.sign
   }
 
-  def verify_signature(key: Key, data: Array[Byte], signature: Array[Byte]): Boolean = {
-    val public_key: PublicKey = key.asInstanceOf[PublicKey]
+  def verify_signature(key: Any, data: Any, signature: Any): Boolean = {
+    val public_key: PublicKey = as_public_key(key)
     val signature_obj = Signature.getInstance(default_signature_algorithm, default_provider)
     signature_obj.initVerify(public_key)
-    signature_obj.update(data)
-    signature_obj.verify(signature)
+    signature_obj.update(get_data_bytes(data))
+    signature_obj.verify(get_data_bytes(signature))
   }
 
   def create_salt(): Int = {
     new Random().nextInt
   }
 
-  def encrypt_password_string(password: String, salt: Int, algorithm: String = default_encrypt_password_algorithm, n: Int = default_encrypt_password_n): String = {
+  def encrypt_password_string(password: Any, salt: Any, algorithm: String = default_encrypt_password_algorithm, n: Int = default_encrypt_password_n): String = {
     val message_digest = MessageDigest.getInstance(algorithm)
     message_digest.reset
-    message_digest.update(integer_bytes(salt))
+    message_digest.update(get_data_bytes(salt))
 
-    var data: Array[Byte] = password.getBytes(default_character_encoding)
+    var data: Array[Byte] = get_data_bytes(password)
     for (i <- 0 to n) {
       message_digest.reset
       data = message_digest.digest(data)
